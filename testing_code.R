@@ -1,5 +1,7 @@
 data = read.csv('data/DailyDelhiClimateTrain.csv')
 
+data_test = read.csv('data/DailyDelhiClimateTest.csv')
+
 
 
 # data preparation --------------------------------------------------------
@@ -7,12 +9,14 @@ data = read.csv('data/DailyDelhiClimateTrain.csv')
 
 
 data$date = NULL
+data_test$date = NULL
 
 summary(data)
 
 # time series creation  --------------------------------------------------------
 
 data = ts(data, start=c(2013,01,01), frequency = 365)
+data_test = ts(data_test, start=c(2017,01,01), frequency = 365)
 plot(data, main = 'Daily weather in New Delhi')
 
 
@@ -201,19 +205,19 @@ legend("topleft", legend = c("observed data",
 cl <- parallel::makeCluster(9)
 doParallel::registerDoParallel(cl)
 
-fit_dos<- auto.arima(data[,1],max.order = 10)
+fit<- auto.arima(data[,1],ic = 'aic', num.cores = 9)
 
 parallel::stopCluster(cl)
 
-npred <- 24 # number of periods ahead to forecast 
+npred <- 100 # number of periods ahead to forecast 
 
 # obtain the forecasts
-p <- predict(fit_dos, n.ahead=npred)
+p <- predict(fit, n.ahead=npred)
 
 
-plot(cbind(data[,1], p$pred), plot.type = "single", ylab = "", type = "n")
-lines(data[,1])
-lines(p$pred, type = "l", col = "blue")
+plot(cbind(data_test[,1], p$pred), plot.type = "single", ylab = "", type = "n")
+lines(data_test[,1], lwd = 2)
+lines(p$pred, type = "l", col = "blue", lwd = 2)
 lines(p$pred + 1.96 * p$se, type = "l", col = "red", lty = 2)  
 lines(p$pred - 1.96 * p$se, type = "l", col = "red", lty = 2)  
 legend("topleft", legend = c("observed data", 
@@ -250,14 +254,14 @@ fit_dos<- auto.arima(data[,2],max.order = 10)
 
 parallel::stopCluster(cl)
 
-npred <- 24 # number of periods ahead to forecast 
+npred <- 100 # number of periods ahead to forecast 
 
 # obtain the forecasts
 p <- predict(fit_dos, n.ahead=npred)
 
 
-plot(cbind(data[,2], p$pred), plot.type = "single", ylab = "", type = "n")
-lines(data[,2])
+plot(cbind(data_test[,2], p$pred), plot.type = "single", ylab = "", type = "n")
+lines(data_test[,2])
 lines(p$pred, type = "l", col = "blue")
 lines(p$pred + 1.96 * p$se, type = "l", col = "red", lty = 2)  
 lines(p$pred - 1.96 * p$se, type = "l", col = "red", lty = 2)  
@@ -295,14 +299,14 @@ fit_tres<- auto.arima(data[,3],max.order = 10)
 
 parallel::stopCluster(cl)
 
-npred <- 24 # number of periods ahead to forecast 
+npred <- 100 # number of periods ahead to forecast 
 
 # obtain the forecasts
 p <- predict(fit_tres, n.ahead=npred)
 
 
-plot(cbind(data[,3], p$pred), plot.type = "single", ylab = "", type = "n")
-lines(data[,3])
+plot(cbind(data_test[,3], p$pred), plot.type = "single", ylab = "", type = "n")
+lines(data_test[,3])
 lines(p$pred, type = "l", col = "blue")
 lines(p$pred + 1.96 * p$se, type = "l", col = "red", lty = 2)  
 lines(p$pred - 1.96 * p$se, type = "l", col = "red", lty = 2)  
@@ -338,27 +342,87 @@ legend('topright', c('Midpoints', "acceptable values"), lwd = 3, col = c('RoyalB
 cl <- parallel::makeCluster(9)
 doParallel::registerDoParallel(cl)
 
-fit_tres<- tso(data[,3],types=c("AO,IO,TS,LS"))
-fit_cuatro<- tso(log(data[,4]),types=c("AO"))
+fit_cuatro<- tso((data[,4]),types=c("AO"))
 
 parallel::stopCluster(cl)
 
 
+# Series: (data[, 4]) 
+# Regression with ARIMA(2,1,0)(0,1,0)[365] errors 
+# 
+# Coefficients:
+#   ar1     ar2    AO216    AO702  AO1183
+# 0.7173  0.1890  -0.0075  -0.0047  2.0278
+# s.e.  0.0001  0.0001   0.0013   0.0010  0.0013
+# AO1256   AO1301   AO1310   AO1322
+# -0.0628  -0.0556  -1.1683  -0.4564
+# s.e.   0.0013   0.0013   0.0013   0.0013
+# AO1363  AO1417   AO1428
+# 0.2982  0.2835  -4.4351
+# s.e.  0.0013  0.0013   0.0013
+# 
+# sigma^2 estimated as 1.217e-05:  log likelihood=4889.79
+# AIC=-9753.59   AICc=-9753.25   BIC=-9688.59
+# 
+# Outliers:
+#   type  ind     time   coefhat     tstat
+# 1    AO  216 2013:216 -0.007528    -5.593
+# 2    AO  702 2014:337 -0.004677    -4.911
+# 3    AO 1183  2016:88  2.027832  1506.685
+# 4    AO 1256 2016:161 -0.062761   -46.628
+# 5    AO 1301 2016:206 -0.055568   -41.286
+# 6    AO 1310 2016:215 -1.168278  -868.019
+# 7    AO 1322 2016:227 -0.456377  -338.703
+# 8    AO 1363 2016:268  0.298177   221.545
+# 9    AO 1417 2016:322  0.283504   210.645
+# 10   AO 1428 2016:333 -4.435070 -3294.783
+
+
 # define the variables containing the outliers for
 # the observations outside the sample
-npred <- 24 # number of periods ahead to forecast 
+npred <- 100 # number of periods ahead to forecast 
 newxreg <- outliers.effects(fit_cuatro$outliers, length(data[,4]) + npred)
 newxreg <- ts(newxreg[-seq_along(data[,4]),], start = c(2013, 1))
 
 # obtain the forecasts
-p <- predict(fit$fit, n.ahead=npred, newxreg=newxreg)
+p <- predict(fit_cuatro$fit, n.ahead=npred, newxreg=newxreg)
 
 
-plot(cbind(data[,4], p$pred), plot.type = "single", ylab = "", type = "n")
-lines(data[,4])
-lines(p$pred, type = "l", col = "blue")
-lines(p$pred + 1.96 * p$se, type = "l", col = "red", lty = 2)  
-lines(p$pred - 1.96 * p$se, type = "l", col = "red", lty = 2)  
+plot(cbind((data_test[,4]), p$pred), plot.type = "single", ylab = "", type = "n", ylim = c(950,1050))
+lines((data_test[,4]))
+lines(exp(p$pred), type = "l", col = "blue")
+lines(exp(p$pred) + exp(1.96) * exp(p$se), type = "l", col = "red", lty = 2)  
+lines(exp(p$pred) - exp(1.96) * exp(p$se), type = "l", col = "red", lty = 2)  
 legend("topleft", legend = c("observed data", 
                              "forecasts", "95% confidence bands"), lty = c(1,1,2,2), 
        col = c("black", "blue", "red", "red"), bty = "n")
+
+
+
+which(data[,4] > 1050)
+data[which(data[,4] > 1050),4] = data[which(data[,4] > 1050)-1,4]
+data[which(data[,4] < 950),4] = data[which(data[,4] < 950) - 1,4]
+plot(data[,4])
+
+cl <- parallel::makeCluster(9)
+doParallel::registerDoParallel(cl)
+
+fit_testing<- arima(data[,4],order= c(2,1,0), seasonal=list(order = c(0,1,0), period = 365))
+fit<-arima(bt,order=c(1,0,0),include.mean=FALSE)
+parallel::stopCluster(cl)
+
+
+# obtain the forecasts
+p <- predict(fit_testing, n.ahead=npred)
+
+
+plot(cbind((data_test[,4]), p$pred), plot.type = "single", ylab = "", type = "n", ylim = c(950,1050))
+lines((data_test[,4]))
+lines((p$pred), type = "l", col = "blue")
+lines((p$pred) + (1.96) * (p$se), type = "l", col = "red", lty = 2)  
+lines((p$pred) - (1.96) * (p$se), type = "l", col = "red", lty = 2)  
+legend("topleft", legend = c("observed data", 
+                             "forecasts", "95% confidence bands"), lty = c(1,1,2,2), 
+       col = c("black", "blue", "red", "red"), bty = "n")
+
+
